@@ -87,12 +87,12 @@
             const id = document.getElementById('invoiceId').value;
             const dateInv = document.getElementById('dateInv').value;
             const description = document.getElementById('description').value;
-            const amount = document.getElementById('amount').value;
+            const amount = parseFloat(document.getElementById('amount').value); // Ensure amount is parsed as float
 
-            const invoice = { dateInv, description, amount };
+            const invoice = { id: parseInt(id), dateInv, description, amount }; // Include id in the JSON payload
 
             if (id) {
-                updateInvoice(id, invoice);
+                updateInvoice(invoice);
             } else {
                 addInvoice(invoice);
             }
@@ -108,7 +108,7 @@
                         const row = document.createElement('tr');
                         row.innerHTML = `
                             <td>${invoice.id}</td>
-                            <td>${invoice.dateInv}</td>
+                            <td>${new Date(invoice.dateInv).toLocaleDateString()}</td>
                             <td>${invoice.description}</td>
                             <td>${invoice.amount}</td>
                             <td>
@@ -118,7 +118,8 @@
                         `;
                         tbody.appendChild(row);
                     });
-                });
+                })
+                .catch(error => console.error('Error loading invoices:', error));
         }
 
         function addInvoice(invoice) {
@@ -131,19 +132,30 @@
             .then(() => {
                 loadInvoices();
                 document.getElementById('invoiceForm').reset();
-            });
+            })
+            .catch(error => console.error('Error adding invoice:', error));
         }
 
-        function updateInvoice(id, invoice) {
-            fetch(`${apiUrl}/${id}`, {
+        function updateInvoice(invoice) {
+            fetch(apiUrl, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(invoice)
             })
-            .then(response => response.json())
-            .then(() => {
-                loadInvoices();
-                document.getElementById('invoiceForm').reset();
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update invoice');
+                }
+                return response.json();
+            })
+            .then(updatedInvoice => {
+                console.log('Invoice updated successfully:', updatedInvoice);
+                loadInvoices(); // Refresh the list of invoices
+                document.getElementById('invoiceForm').reset(); // Clear the form fields
+            })
+            .catch(error => {
+                console.error('Error updating invoice:', error);
+                alert('Failed to update invoice. Please try again later.'); // Show user-friendly error message
             });
         }
 
@@ -153,7 +165,8 @@
             })
             .then(() => {
                 loadInvoices();
-            });
+            })
+            .catch(error => console.error('Error deleting invoice:', error));
         }
 
         function editInvoice(id) {
@@ -164,7 +177,8 @@
                     document.getElementById('dateInv').value = invoice.dateInv;
                     document.getElementById('description').value = invoice.description;
                     document.getElementById('amount').value = invoice.amount;
-                });
+                })
+                .catch(error => console.error('Error fetching invoice:', error));
         }
     </script>
 </body>
