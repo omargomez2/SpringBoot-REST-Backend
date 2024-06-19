@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Management</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: url('https://picsum.photos/1920/1080') no-repeat center center fixed;
+            background-size: cover;
+            margin: 0;
+            padding: 20px;
+        }
+        .overlay {
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        h1, h2 {
+            color: #007bff;
+        }
+        .table-container {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="overlay">
+        <section class="section">
+            <div class="container">
+                <h1 class="title">Invoice Management</h1>
+                <div class="table-container">
+                    <table class="table is-striped is-hoverable is-fullwidth" id="invoicesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Rows will be populated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <h2 class="subtitle">Add/Update Invoice</h2>
+                <form id="invoiceForm">
+                    <input type="hidden" id="invoiceId" name="id">
+                    <div class="field">
+                        <label class="label" for="dateInv">Date</label>
+                        <div class="control">
+                            <input class="input" type="date" id="dateInv" name="dateInv" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="description">Description</label>
+                        <div class="control">
+                            <input class="input" type="text" id="description" name="description" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label class="label" for="amount">Amount</label>
+                        <div class="control">
+                            <input class="input" type="number" step="0.01" id="amount" name="amount" required>
+                        </div>
+                    </div>
+                    <div class="control">
+                        <button class="button is-primary" type="submit">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </div>
+    
+    <script>
+        const apiUrl = 'http://localhost:8080/api/v1/invoice';
+
+        document.addEventListener('DOMContentLoaded', loadInvoices);
+
+        document.getElementById('invoiceForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const id = document.getElementById('invoiceId').value;
+            const dateInv = document.getElementById('dateInv').value;
+            const description = document.getElementById('description').value;
+            const amount = document.getElementById('amount').value;
+
+            const invoice = { dateInv, description, amount };
+
+            if (id) {
+                updateInvoice(id, invoice);
+            } else {
+                addInvoice(invoice);
+            }
+        });
+
+        function loadInvoices() {
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('#invoicesTable tbody');
+                    tbody.innerHTML = '';
+                    data.forEach(invoice => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td>${invoice.id}</td>
+                            <td>${invoice.dateInv}</td>
+                            <td>${invoice.description}</td>
+                            <td>${invoice.amount}</td>
+                            <td>
+                                <button class="button is-small is-info" onclick="editInvoice(${invoice.id})">Edit</button>
+                                <button class="button is-small is-danger" onclick="deleteInvoice(${invoice.id})">Delete</button>
+                            </td>
+                        `;
+                        tbody.appendChild(row);
+                    });
+                });
+        }
+
+        function addInvoice(invoice) {
+            fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(invoice)
+            })
+            .then(response => response.json())
+            .then(() => {
+                loadInvoices();
+                document.getElementById('invoiceForm').reset();
+            });
+        }
+
+        function updateInvoice(id, invoice) {
+            fetch(`${apiUrl}/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(invoice)
+            })
+            .then(response => response.json())
+            .then(() => {
+                loadInvoices();
+                document.getElementById('invoiceForm').reset();
+            });
+        }
+
+        function deleteInvoice(id) {
+            fetch(`${apiUrl}/${id}`, {
+                method: 'DELETE'
+            })
+            .then(() => {
+                loadInvoices();
+            });
+        }
+
+        function editInvoice(id) {
+            fetch(`${apiUrl}/${id}`)
+                .then(response => response.json())
+                .then(invoice => {
+                    document.getElementById('invoiceId').value = invoice.id;
+                    document.getElementById('dateInv').value = invoice.dateInv;
+                    document.getElementById('description').value = invoice.description;
+                    document.getElementById('amount').value = invoice.amount;
+                });
+        }
+    </script>
+</body>
+</html>
